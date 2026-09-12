@@ -24,6 +24,7 @@ type CardEntry = {
   cover?: string;
   meta: string;
   badge?: string;
+  countBadge: string;
   tag?: string;
   accent?: boolean;
 };
@@ -132,6 +133,7 @@ export function App({ manga, magazines, showingDrafts }: AppProps) {
             ? `${owned.length}作品`
             : `${item.magazine?.name ?? "雑誌未設定"} / ${owned.length}巻`,
           badge: !singleVolumeCollection && item.is_serialized ? "連載中" : undefined,
+          countBadge: String(owned.length),
           tag: !singleVolumeCollection && item.is_serialized ? "連載中" : undefined
         };
       });
@@ -146,7 +148,7 @@ export function App({ manga, magazines, showingDrafts }: AppProps) {
         meta: singleVolumeCollection
           ? `全${item.covers.length}作品`
           : `${item.magazine?.name ?? "雑誌未設定"} / 全${item.covers.length}巻`,
-        badge: `${unownedCount}件`,
+        countBadge: String(unownedCount),
         tag: `未所持${unownedCount}件`,
         accent: true
       };
@@ -334,17 +336,24 @@ export function App({ manga, magazines, showingDrafts }: AppProps) {
                         {card.badge}
                       </span>
                     )}
+                    {viewMode === "cards" && (
+                      <span className="coverCountBadge" data-accent={card.accent}>
+                        {card.countBadge}
+                      </span>
+                    )}
                   </span>
                   <span className="mangaCardBody">
                     <strong>{card.title}</strong>
-                    <span className="mangaMetaRow">
-                      <span className="mangaMetaText">{card.meta}</span>
-                      {card.tag && viewMode === "list" && (
-                        <span className="listStatusTag" data-accent={card.accent}>
-                          {card.tag}
-                        </span>
-                      )}
-                    </span>
+                    {viewMode === "list" && (
+                      <span className="mangaMetaRow">
+                        <span className="mangaMetaText">{card.meta}</span>
+                        {card.tag && (
+                          <span className="listStatusTag" data-accent={card.accent}>
+                            {card.tag}
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </span>
                 </button>
               ))}
@@ -422,7 +431,6 @@ function MangaDetail({ manga, pageMode }: { manga: Manga; pageMode: PageMode }) 
           <img src={manga.magazine.logo.url} alt="" />
           <div>
             <strong>{manga.magazine.name}</strong>
-            <span>{manga.magazine.label ?? "レーベル未設定"}</span>
           </div>
         </div>
       )}

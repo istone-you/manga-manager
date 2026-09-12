@@ -390,20 +390,6 @@ h2 {
   white-space: nowrap;
 }
 
-.mangaCardBody strong {
-  font-size: 15px;
-  line-height: 1.35;
-}
-
-.mangaGrid[data-view="list"] .mangaCardBody strong {
-  font-size: 18px;
-}
-
-.mangaCardBody span {
-  color: #6d797e;
-  font-size: 12px;
-}
-
 .mangaMetaRow {
   align-items: center;
   display: flex;
@@ -418,11 +404,39 @@ h2 {
   white-space: nowrap;
 }
 
+.mangaCardBody strong {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.mangaGrid[data-view="list"] .mangaCardBody strong {
+  font-size: 18px;
+}
+
+.mangaCardBody span {
+  color: #6d797e;
+  font-size: 12px;
+}
+
 .coverBadge[data-accent="true"],
+.coverCountBadge[data-accent="true"],
 .listStatusTag[data-accent="true"],
 .detailMeta span[data-accent="true"] {
   background: #fdeceb;
   color: #b03a2c;
+}
+
+.coverCountBadge {
+  background: rgb(29 42 47 / 88%);
+  border-radius: 999px;
+  bottom: 8px;
+  color: #fffaf0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 7px 9px;
+  position: absolute;
+  right: 8px;
 }
 
 .listStatusTag {
@@ -598,11 +612,6 @@ h2 {
   min-width: 0;
 }
 
-.magazineStrip span {
-  color: #6d797e;
-  font-size: 13px;
-}
-
 .coversGrid {
   display: grid;
   gap: 16px;
@@ -684,13 +693,21 @@ h2 {
   }
 
   .modalBackdrop {
-    padding: 12px;
+    padding:
+      max(5dvh, env(safe-area-inset-top))
+      max(5vw, env(safe-area-inset-right))
+      max(5dvh, env(safe-area-inset-bottom))
+      max(5vw, env(safe-area-inset-left));
   }
 
   .detailModal {
-    height: calc(100vh - 24px);
+    height: 90vh;
+    height: 90dvh;
+    max-height: 90dvh;
+    max-width: 90vw;
+    overflow-x: hidden;
     padding: 0 18px 18px;
-    width: calc(100vw - 24px);
+    width: 90vw;
   }
 
   .modalTopbar {
@@ -739,6 +756,15 @@ h2 {
 
   .detailMeta {
     justify-content: flex-start;
+  }
+
+  .coversGrid {
+    gap: 12px 6px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .coverCard figcaption {
+    display: none;
   }
 
   .mangaGrid {
