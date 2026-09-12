@@ -1,28 +1,19 @@
-import type { ListResponse, Magazine, Manga } from "./types";
+import type { ListResponse, Magazine, Manga } from "../types";
 
-const serviceDomain = import.meta.env.VITE_MICROCMS_SERVICE_DOMAIN as string | undefined;
-const apiKey = import.meta.env.VITE_MICROCMS_API_KEY as string | undefined;
-const showDrafts = import.meta.env.VITE_MICROCMS_INCLUDE_DRAFTS === "true";
+const serviceDomain = import.meta.env.MICROCMS_SERVICE_DOMAIN ?? import.meta.env.VITE_MICROCMS_SERVICE_DOMAIN;
+const apiKey = import.meta.env.MICROCMS_API_KEY ?? import.meta.env.VITE_MICROCMS_API_KEY;
 
-const hasMicroCmsConfig = Boolean(serviceDomain && apiKey);
-
-async function getList<T>(endpoint: string, params: Record<string, string | number> = {}) {
+async function getList<T>(endpoint: string, params: Record<string, string | number>) {
   if (!serviceDomain || !apiKey) {
-    throw new Error("microCMS の環境変数が未設定です。");
+    throw new Error("MICROCMS_SERVICE_DOMAIN と MICROCMS_API_KEY を設定してください。");
   }
 
   const searchParams = new URLSearchParams();
-  Object.entries(params).forEach(([key, value]) => {
-    searchParams.set(key, String(value));
-  });
+  Object.entries(params).forEach(([key, value]) => searchParams.set(key, String(value)));
 
   const response = await fetch(
     `https://${serviceDomain}.microcms.io/api/v1/${endpoint}?${searchParams.toString()}`,
-    {
-      headers: {
-        "X-MICROCMS-API-KEY": apiKey
-      }
-    }
+    { headers: { "X-MICROCMS-API-KEY": apiKey } }
   );
 
   if (!response.ok) {
@@ -32,7 +23,7 @@ async function getList<T>(endpoint: string, params: Record<string, string | numb
   return (await response.json()) as ListResponse<T>;
 }
 
-async function getAll<T>(endpoint: string, params: Record<string, string | number> = {}) {
+async function getAll<T>(endpoint: string, params: Record<string, string | number>) {
   const limit = 100;
   const first = await getList<T>(endpoint, { ...params, limit, offset: 0 });
   const contents = [...first.contents];
@@ -46,12 +37,6 @@ async function getAll<T>(endpoint: string, params: Record<string, string | numbe
 }
 
 export async function getLibraryData() {
-  if (!hasMicroCmsConfig) {
-    throw new Error(
-      "microCMS の環境変数が未設定です。VITE_MICROCMS_SERVICE_DOMAIN と VITE_MICROCMS_API_KEY を設定してください。"
-    );
-  }
-
   const [manga, magazines] = await Promise.all([
     getAll<Manga>("manga", { depth: 2, orders: "title" }),
     getAll<Magazine>("magazines", { depth: 2, orders: "name" })
@@ -60,6 +45,6 @@ export async function getLibraryData() {
   return {
     manga,
     magazines,
-    showDrafts
+    showingDrafts: (import.meta.env.MICROCMS_INCLUDE_DRAFTS ?? import.meta.env.VITE_MICROCMS_INCLUDE_DRAFTS) === "true"
   };
 }

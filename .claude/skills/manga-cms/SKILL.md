@@ -146,10 +146,14 @@ r'https://cache2-ebookjapan\.akamaized\.net/contents/thumb/[a-z]/[A-Z0-9]+\.jpg\
   表示する巻を出し分ける（library=所持のみ、unowned=未所持のみ）
 - 一覧は `.mangaGrid` / `.mangaCard` に統一（`data-view` でカード/リスト切替）
 
-変更後は `npm run build` で型チェックまで通す。
+フロントは Astro の静的出力で、`src/pages/index.astro` がビルド時に microCMS を取得し、
+React の `App` へ props として渡す。ブラウザから microCMS を直接呼ばない。
+
+変更後は `aube run build` で型チェックと静的生成まで通す。
 
 ## 認証
 
-`.env.local` の `VITE_MICROCMS_API_KEY` が読み書き両方に使える。
-MCP サーバー (`microcms`) も同じキーで、`.mcp.json` ではなく `~/.claude.json` の
-プロジェクト設定に入っている。
+ローカルビルドでは `.env.local` の `MICROCMS_API_KEY` を使う。このキーはAstroの
+ビルド処理だけから参照し、生成されたHTMLやJavaScriptへ含めない。
+GitHub PagesではリポジトリのActions Secret `MICROCMS_API_KEY` を使う。
+MCPサーバー (`microcms`) の認証情報は `~/.codex/config.toml` に置く。

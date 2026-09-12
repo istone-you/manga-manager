@@ -10,7 +10,6 @@ import {
   TriangleAlert,
   X
 } from "lucide-react";
-import { getLibraryData } from "./microcms";
 import type { Magazine, Manga } from "./types";
 
 type StatusFilter = "all" | "serialized" | "completed" | "transferred";
@@ -29,43 +28,29 @@ type CardEntry = {
   accent?: boolean;
 };
 
-export function App() {
-  const [manga, setManga] = useState<Manga[]>([]);
-  const [magazines, setMagazines] = useState<Magazine[]>([]);
+type AppProps = {
+  manga: Manga[];
+  magazines: Magazine[];
+  showingDrafts: boolean;
+};
+
+export function App({ manga, magazines, showingDrafts }: AppProps) {
   const [query, setQuery] = useState("");
   const [publisher, setPublisher] = useState("all");
   const [magazineId, setMagazineId] = useState("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(manga[0]?.id ?? null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDetailClosing, setIsDetailClosing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [showingDrafts, setShowingDrafts] = useState(false);
-  const [pageMode, setPageMode] = useState<PageMode>(() => {
-    return window.location.hash === "#unowned" ? "unowned" : "library";
-  });
-
-  useEffect(() => {
-    getLibraryData()
-      .then((data) => {
-        setManga(data.manga);
-        setMagazines(data.magazines);
-        setShowingDrafts(data.showDrafts);
-        setSelectedId(data.manga[0]?.id ?? null);
-      })
-      .catch((cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : "データ取得に失敗しました。");
-      })
-      .finally(() => setLoading(false));
-  }, []);
+  const [pageMode, setPageMode] = useState<PageMode>("library");
 
   useEffect(() => {
     const handleHashChange = () => {
       setPageMode(window.location.hash === "#unowned" ? "unowned" : "library");
     };
 
+    handleHashChange();
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
@@ -323,10 +308,7 @@ export function App() {
           </div>
         </header>
 
-        {loading && <div className="emptyState">読み込み中</div>}
-        {error && <div className="emptyState">{error}</div>}
-        {!loading && !error && (
-          <div className="libraryLayout">
+        <div className="libraryLayout">
             <div
               className="mangaGrid"
               data-view={viewMode}
@@ -372,8 +354,7 @@ export function App() {
                 </div>
               )}
             </div>
-          </div>
-        )}
+        </div>
       </section>
 
       {isDetailOpen && selected && (
