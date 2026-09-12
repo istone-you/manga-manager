@@ -1,10 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   BookOpen,
   CheckCircle2,
   Grid3X3,
   Library,
   List,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelTopClose,
+  PanelTopOpen,
   Search,
   Tags,
   TriangleAlert,
@@ -15,8 +21,11 @@ import type { Magazine, Manga } from "./types";
 type StatusFilter = "all" | "serialized" | "completed" | "transferred";
 type ViewMode = "cards" | "list";
 type PageMode = "library" | "unowned";
+type SortKey = "title" | "owned" | "unowned" | "total" | "updated";
+type SortDirection = "asc" | "desc";
 
 const isSingleVolumeCollection = (manga: Manga) => manga.id === "single";
+const titleCollator = new Intl.Collator("ja", { numeric: true, sensitivity: "base" });
 
 type CardEntry = {
   id: string;
@@ -41,6 +50,9 @@ export function App({ manga, magazines, showingDrafts }: AppProps) {
   const [magazineId, setMagazineId] = useState("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("cards");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sortKey, setSortKey] = useState<SortKey>("title");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selectedId, setSelectedId] = useState<string | null>(manga[0]?.id ?? null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isDetailClosing, setIsDetailClosing] = useState(false);
@@ -55,6 +67,16 @@ export function App({ manga, magazines, showingDrafts }: AppProps) {
     window.addEventListener("hashchange", handleHashChange);
     return () => window.removeEventListener("hashchange", handleHashChange);
   }, []);
+
+  useEffect(() => {
+    if (
+      (pageMode === "library" && sortKey === "unowned") ||
+      (pageMode === "unowned" && sortKey === "owned")
+    ) {
+      setSortKey("title");
+      setSortDirection("asc");
+    }
+  }, [pageMode, sortKey]);
 
   const publishers = useMemo(() => {
     return Array.from(
@@ -120,9 +142,45 @@ export function App({ manga, magazines, showingDrafts }: AppProps) {
 
   const unownedTotal = unownedManga.reduce((sum, entry) => sum + entry.unownedCount, 0);
 
+  const compareManga = (left: Manga, right: Manga, key: SortKey) => {
+    let comparison = 0;
+
+    if (key === "owned") {
+      comparison =
+        left.covers.filter((cover) => cover.not_owned !== true).length -
+        right.covers.filter((cover) => cover.not_owned !== true).length;
+    } else if (key === "unowned") {
+      comparison =
+        left.covers.filter((cover) => cover.not_owned === true).length -
+        right.covers.filter((cover) => cover.not_owned === true).length;
+    } else if (key === "total") {
+      comparison = left.covers.length - right.covers.length;
+    } else if (key === "updated") {
+      comparison = new Date(left.updatedAt ?? 0).getTime() - new Date(right.updatedAt ?? 0).getTime();
+    } else {
+      comparison = titleCollator.compare(left.title, right.title);
+    }
+
+    if (comparison === 0) {
+      return titleCollator.compare(left.title, right.title);
+    }
+
+    return sortDirection === "asc" ? comparison : -comparison;
+  };
+
+  const sortedFiltered = useMemo(
+    () => [...filtered].sort((left, right) => compareManga(left, right, sortKey)),
+    [filtered, sortDirection, sortKey]
+  );
+
+  const sortedUnownedManga = useMemo(
+    () => [...unownedManga].sort((left, right) => compareManga(left.item, right.item, sortKey)),
+    [sortDirection, sortKey, unownedManga]
+  );
+
   const cards: CardEntry[] = useMemo(() => {
     if (pageMode === "library") {
-      return filtered.map((item) => {
+      return sortedFiltered.map((item) => {
         const owned = item.covers.filter((cover) => cover.not_owned !== true);
         const singleVolumeCollection = isSingleVolumeCollection(item);
         return {
@@ -139,7 +197,7 @@ export function App({ manga, magazines, showingDrafts }: AppProps) {
       });
     }
 
-    return unownedManga.map(({ item, unownedCount }) => {
+    return sortedUnownedManga.map(({ item, unownedCount }) => {
       const singleVolumeCollection = isSingleVolumeCollection(item);
       return {
         id: item.id,
@@ -153,7 +211,7 @@ export function App({ manga, magazines, showingDrafts }: AppProps) {
         accent: true
       };
     });
-  }, [filtered, pageMode, unownedManga]);
+  }, [pageMode, sortedFiltered, sortedUnownedManga]);
 
   const closeDetail = () => {
     setIsDetailClosing(true);
@@ -184,8 +242,13 @@ export function App({ manga, magazines, showingDrafts }: AppProps) {
   }, [isDetailOpen]);
 
   return (
-    <main className="appShell">
-      <section className="sidebar" aria-label="漫画ライブラリの操作">
+    <main className="appShell" data-sidebar-open={isSidebarOpen}>
+      <section
+        className="sidebar"
+        aria-label="漫画ライブラリの操作"
+        aria-hidden={!isSidebarOpen}
+        inert={!isSidebarOpen ? true : undefined}
+      >
         <div className="brandBlock">
           <div className="brandIcon">
             <Library size={18} aria-hidden="true" />
@@ -193,6 +256,28 @@ export function App({ manga, magazines, showingDrafts }: AppProps) {
           <div>
             <h1>漫画管理</h1>
           </div>
+          {isSidebarOpen && (
+            <button
+              className="panelToggle desktopPanelToggle"
+              type="button"
+              aria-label="管理パネルを閉じる"
+              title="管理パネルを閉じる"
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <PanelLeftClose size={20} aria-hidden="true" />
+            </button>
+          )}
+          {isSidebarOpen && (
+            <button
+              className="panelToggle mobilePanelToggle"
+              type="button"
+              aria-label="管理パネルを閉じる"
+              title="管理パネルを閉じる"
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <PanelTopClose size={20} aria-hidden="true" />
+            </button>
+          )}
         </div>
 
         <div className="statsGrid" aria-label="集計">
@@ -275,17 +360,75 @@ export function App({ manga, magazines, showingDrafts }: AppProps) {
               <option value="transferred">移籍済</option>
             </select>
           </div>
+
+          <div className="fieldGroup">
+            <label htmlFor="sort">並べ替え</label>
+            <div className="sortControls">
+              <select
+                id="sort"
+                value={sortKey}
+                onChange={(event) => {
+                  const nextKey = event.target.value as SortKey;
+                  setSortKey(nextKey);
+                  setSortDirection(nextKey === "title" ? "asc" : "desc");
+                }}
+              >
+                <option value="title">タイトル</option>
+                {pageMode === "library" ? (
+                  <option value="owned">所持巻数</option>
+                ) : (
+                  <option value="unowned">未所持数</option>
+                )}
+                <option value="total">全巻数</option>
+                <option value="updated">更新日</option>
+              </select>
+              <button
+                type="button"
+                aria-label={sortDirection === "asc" ? "昇順" : "降順"}
+                title={sortDirection === "asc" ? "昇順" : "降順"}
+                onClick={() => setSortDirection((current) => (current === "asc" ? "desc" : "asc"))}
+              >
+                {sortDirection === "asc" ? (
+                  <ArrowUp size={18} aria-hidden="true" />
+                ) : (
+                  <ArrowDown size={18} aria-hidden="true" />
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
       <section className="contentArea">
         <header className="toolbar">
-          <div>
+          <div className="toolbarTitle">
+            {!isSidebarOpen && (
+              <button
+                className="panelToggle desktopPanelToggle"
+                type="button"
+                aria-label="管理パネルを開く"
+                title="管理パネルを開く"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <PanelLeftOpen size={20} aria-hidden="true" />
+              </button>
+            )}
             <h2>
               {pageMode === "library"
                 ? `${filtered.length}件の作品`
                 : `${unownedManga.length}件の作品（${unownedTotal}件の未所持）`}
             </h2>
+            {!isSidebarOpen && (
+              <button
+                className="panelToggle mobilePanelToggle"
+                type="button"
+                aria-label="管理パネルを開く"
+                title="管理パネルを開く"
+                onClick={() => setIsSidebarOpen(true)}
+              >
+                <PanelTopOpen size={20} aria-hidden="true" />
+              </button>
+            )}
           </div>
           <div className="toolbarActions">
             {showingDrafts && <span className="draftBadge">下書き表示中</span>}
